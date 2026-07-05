@@ -1,4 +1,5 @@
 import { sendblueChannel } from "eve-channel-sendblue";
+import { persistMediaToBlob } from "../lib/persist-media-blob.js";
 
 /**
  * Puts this agent on iMessage/SMS via Sendblue.
@@ -16,6 +17,9 @@ export default sendblueChannel({
     apiSecret: process.env.SENDBLUE_API_SECRET,
     webhookSecret: process.env.SENDBLUE_WEBHOOK_SECRET,
   },
+  // Persist inbound images to public Vercel Blob so they outlive Sendblue's
+  // ~30-day URL expiry (needs a Blob store; falls back to the Sendblue URL).
+  persistMedia: persistMediaToBlob,
   // Verbose per-step traces in the testbed logs; drop for production quiet.
   debug: true,
 });

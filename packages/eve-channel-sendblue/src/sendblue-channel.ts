@@ -1,4 +1,3 @@
-import type { FilePart, UserContent } from "ai";
 import {
   type Channel,
   type ChannelEvents,
@@ -11,6 +10,7 @@ import { createSendblueClient, type SendblueClient } from "./client.js";
 import { resolveConfig } from "./config.js";
 import { buildContext } from "./context.js";
 import { routingFromPayload, sendblueContinuationToken } from "./continuation-token.js";
+import { buildUserContent, guessMediaType, resolveInboundMediaUrl } from "./media.js";
 import type {
   ResolvedSendblueConfig,
   SendblueChannelConfig,
@@ -29,20 +29,6 @@ import {
   isTypingPayload,
   verifyWebhookSecret,
 } from "./webhook.js";
-
-const IMAGE_EXTS: Record<string, string> = {
-  jpg: "image/jpeg",
-  jpeg: "image/jpeg",
-  png: "image/png",
-  gif: "image/gif",
-  heic: "image/heic",
-  webp: "image/webp",
-};
-
-function guessMediaType(url: string): string {
-  const ext = url.split("?")[0]?.split(".").pop()?.toLowerCase() ?? "";
-  return IMAGE_EXTS[ext] ?? "application/octet-stream";
-}
 
 function initialState(): SendblueChannelState {
   return {
@@ -283,7 +269,22 @@ async function dispatch(
       );
   }
 
-  const message = buildMessage(payload, inbound.text);
+  let media: { url: string; mediaType: string } | undefined;
+  if (payload.media_url) {
+    const mediaType = guessMediaType(payload.media_url);
+    const url = await resolveInboundMediaUrl(
+      config.persistMedia,
+      {
+        url: payload.media_url,
+        mediaType,
+        messageHandle: payload.message_handle,
+        fromNumber: payload.from_number,
+      },
+      config.log,
+    );
+    media = { url, mediaType };
+  }
+  const message = buildUserContent(inbound.text, media);
 
   // Stamp the current thread + message handle onto the auth so tools (e.g. the
   // tapback tool) can act on the message that triggered this turn. `auth.current`
@@ -326,17 +327,6 @@ async function dispatch(
       error: error instanceof Error ? error.message : String(error),
     });
   }
-}
-
-function buildMessage(payload: SendblueMessagePayload, text: string): string | UserContent {
-  if (!payload.media_url) return text;
-
-  const filePart: FilePart = {
-    type: "file",
-    data: new URL(payload.media_url),
-    mediaType: guessMediaType(payload.media_url),
-  };
-  return [{ type: "text", text }, filePart];
 }
 
 function ok(): Response {

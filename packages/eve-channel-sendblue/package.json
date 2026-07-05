@@ -1,6 +1,6 @@
 {
   "name": "eve-channel-sendblue",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "Sendblue (iMessage/SMS) channel for the eve agent framework",
   "keywords": [
     "agent",

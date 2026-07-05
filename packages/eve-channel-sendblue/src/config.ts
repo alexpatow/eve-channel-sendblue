@@ -76,6 +76,7 @@ export function resolveConfig(config: SendblueChannelConfig = {}): ResolvedSendb
           attributes: { line: message.sendblueNumber, service: message.service },
         },
       })),
+    persistMedia: config.persistMedia ?? null,
     route: config.route ?? DEFAULT_ROUTE,
     typingIndicator: config.typingIndicator ?? true,
     errorMessage:

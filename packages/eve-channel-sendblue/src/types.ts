@@ -52,6 +52,27 @@ export type SendblueOnInbound = (
   message: SendblueInboundMessage,
 ) => { auth: SendblueAuth | null } | null | Promise<{ auth: SendblueAuth | null } | null>;
 
+/** An inbound media attachment handed to {@link SendbluePersistMedia}. */
+export interface SendblueInboundMedia {
+  /** The Sendblue-hosted media URL. Public, but expires ~30 days after receipt. */
+  readonly url: string;
+  /** Best-effort MIME type guessed from the URL. */
+  readonly mediaType: string;
+  /** Handle of the inbound message the media arrived on. */
+  readonly messageHandle: string;
+  /** The contact who sent it (E.164). */
+  readonly fromNumber: string;
+}
+
+/**
+ * Persist inbound media to your own store and return the durable URL to hand the
+ * model instead of Sendblue's expiring one. Return the original `media.url` (or
+ * throw; failures fall back to it) to keep the Sendblue URL. The returned URL
+ * must stay fetchable for the life of the conversation, since eve re-references
+ * it on every later turn.
+ */
+export type SendbluePersistMedia = (media: SendblueInboundMedia) => string | Promise<string>;
+
 /**
  * A secret value: a plain string, or a lazy (optionally async) resolver. A
  * resolver is called the first time the secret is needed and its result cached,
@@ -91,6 +112,11 @@ export interface SendblueChannelConfig {
   allowFrom?: SendblueAllowFrom;
   /** Decide dispatch and auth for each inbound message. */
   onInbound?: SendblueOnInbound;
+  /**
+   * Persist inbound media on receipt (e.g. to Vercel Blob) and return a durable
+   * URL for the model. Without it, Sendblue's ~30-day URL is used as-is.
+   */
+  persistMedia?: SendbluePersistMedia;
   /** Base path the webhook route mounts under. @default "/eve/v1/sendblue" */
   route?: string;
   /** Show the iMessage typing bubble while the agent works on a turn (1:1 only). @default true */
@@ -129,6 +155,7 @@ export interface ResolvedSendblueConfig {
   readonly allowedServices: readonly SendblueService[];
   readonly allowFrom: SendblueAllowFrom;
   readonly onInbound: SendblueOnInbound;
+  readonly persistMedia: SendbluePersistMedia | null;
   readonly route: string;
   readonly typingIndicator: boolean;
   readonly errorMessage: string;

@@ -95,11 +95,36 @@ session history whose bytes are gone on the next (fresh-sandbox) invocation, so 
 later turn failed the staging invariant and terminated the whole session. Passing
 the URL keeps a durable reference the provider fetches at model-call time.
 
-Consequence: the model can only "see" an image while its URL is still fetchable.
-Sendblue's inbound `media_url`s expire after ~30 days, so images drop out of
-long-lived conversations. To keep media durable (and private), persist it to your
-own store on receipt and hand the model that URL instead. A hook for this is on
-the roadmap; today you can do it in a custom `onInbound` + `events` setup.
+Consequence: the model can only "see" an image while its URL is still fetchable,
+and eve re-references that URL on every later turn. Sendblue's inbound `media_url`s
+expire after ~30 days, so images drop out of long-lived conversations.
+
+To make media durable, pass a `persistMedia` hook. On receipt the channel calls
+it with the attachment and uses the URL it returns (a permanent one from your own
+store) instead of Sendblue's. If the hook throws or returns nothing, the channel
+falls back to the Sendblue URL, so media can never fail a turn.
+
+```ts
+import { put } from "@vercel/blob";
+
+sendblueChannel({
+  async persistMedia({ url, mediaType, messageHandle }) {
+    const res = await fetch(url);
+    if (!res.ok) return url; // keep the Sendblue URL on failure
+    const blob = await put(`sendblue/${messageHandle}`, await res.arrayBuffer(), {
+      access: "public", // Sendblue media is already public/unguessable
+      contentType: mediaType,
+      addRandomSuffix: true,
+    });
+    return blob.url; // permanent, no ~30-day expiry
+  },
+});
+```
+
+Public Blob URLs never expire, so this extends media lifetime from ~30 days to
+permanent. For a private store, keep a stable id in history and mint short-lived
+signed URLs on demand from a tool, since a signed URL placed directly in history
+would expire while eve still references it.
 
 ## Platform limitations
 
