@@ -51,14 +51,14 @@ export function sendblueTapbackTool(config: SendblueChannelConfig = {}) {
       const fromNumber = readString(attributes.sendblueLine);
       const messageHandle = readString(attributes.sendblueMessageHandle);
       if (!fromNumber || !messageHandle) {
-        resolved.log("[sendblue] tapback skipped: no message in context");
+        resolved.logDebug("[sendblue] tapback skipped: no message in context");
         return { ok: false, error: "No Sendblue message in the current context." };
       }
 
-      resolved.log("[sendblue] tapback →", { reaction, messageHandle });
+      resolved.logDebug("[sendblue] tapback →", { reaction, messageHandle });
       try {
         await client.addReaction({ fromNumber, messageHandle, reaction });
-        resolved.log("[sendblue] tapback ok");
+        resolved.logDebug("[sendblue] tapback ok");
         return { ok: true, reaction };
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

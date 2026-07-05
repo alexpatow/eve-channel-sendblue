@@ -132,6 +132,7 @@ export function createSendblueClient(config: ResolvedSendblueConfig): SendblueCl
         config.log(`[sendblue:dry-run] MARK READ → ${contactNumber}`);
         return;
       }
+      // `/api/mark-read` is not exposed by the typed SDK; call it over raw HTTP.
       await sdk.post("/api/mark-read", {
         body: { number: contactNumber, from_number: fromNumber },
       });
@@ -143,6 +144,8 @@ export function createSendblueClient(config: ResolvedSendblueConfig): SendblueCl
         config.log(`[sendblue:dry-run] REACT ${reaction} → ${messageHandle}`);
         return;
       }
+      // Tapbacks aren't in the typed SDK surface; `/api/send-reaction` is the
+      // documented Sendblue endpoint, called here over raw HTTP.
       await sdk.post("/api/send-reaction", {
         body: { from_number: fromNumber, message_handle: messageHandle, reaction },
       });

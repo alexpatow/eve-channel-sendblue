@@ -55,6 +55,8 @@ export function resolveConfig(config: SendblueChannelConfig = {}): ResolvedSendb
     );
   }
 
+  const debug = config.debug ?? false;
+
   return {
     apiKey: secretResolver(credentials.apiKey, "SENDBLUE_API_KEY"),
     apiSecret: secretResolver(credentials.apiSecret, "SENDBLUE_API_SECRET"),
@@ -79,6 +81,10 @@ export function resolveConfig(config: SendblueChannelConfig = {}): ResolvedSendb
     errorMessage:
       config.errorMessage ?? "Sorry, I hit an error handling your message. Please try again.",
     dryRun,
+    debug,
     log,
+    logDebug: (message, detail) => {
+      if (debug) log(message, detail);
+    },
   };
 }

@@ -16,4 +16,6 @@ export default sendblueChannel({
     apiSecret: process.env.SENDBLUE_API_SECRET,
     webhookSecret: process.env.SENDBLUE_WEBHOOK_SECRET,
   },
+  // Verbose per-step traces in the testbed logs; drop for production quiet.
+  debug: true,
 });

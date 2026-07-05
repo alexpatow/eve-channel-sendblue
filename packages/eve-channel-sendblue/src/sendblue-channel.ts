@@ -66,7 +66,7 @@ function buildDefaultEvents(config: ResolvedSendblueConfig): ChannelEvents<Sendb
   const safe = async (label: string, run: () => Promise<void>): Promise<void> => {
     try {
       await run();
-      config.log(`[sendblue] ${label} ok`);
+      config.logDebug(`[sendblue] ${label} ok`);
     } catch (error) {
       config.log(`[sendblue] ${label} failed`, {
         error: error instanceof Error ? error.message : String(error),
@@ -78,7 +78,7 @@ function buildDefaultEvents(config: ResolvedSendblueConfig): ChannelEvents<Sendb
     async "message.completed"(event, channel) {
       if (event.finishReason === "tool-calls" || !event.message) return;
       const message = event.message;
-      config.log("[sendblue] reply →", { chars: message.length });
+      config.logDebug("[sendblue] reply →", { chars: message.length });
       await safe("reply", () => channel.sendblue.reply(message));
     },
     // A turn failed but the session may recover.
@@ -257,7 +257,7 @@ async function dispatch(
     raw: payload,
   };
 
-  config.log("[sendblue] inbound", {
+  config.logDebug("[sendblue] inbound", {
     from: payload.from_number,
     service: payload.service,
     handle: payload.message_handle,
@@ -267,7 +267,7 @@ async function dispatch(
 
   const decision = await config.onInbound(inbound);
   if (decision === null) {
-    config.log("[sendblue] inbound dropped by onInbound");
+    config.logDebug("[sendblue] inbound dropped by onInbound");
     return;
   }
 
@@ -275,7 +275,7 @@ async function dispatch(
   if (routing.contactNumber) {
     client
       .markRead({ fromNumber: routing.fromNumber, contactNumber: routing.contactNumber })
-      .then(() => config.log("[sendblue] read receipt ok"))
+      .then(() => config.logDebug("[sendblue] read receipt ok"))
       .catch((error) =>
         config.log("[sendblue] read receipt failed", {
           error: error instanceof Error ? error.message : String(error),
@@ -317,7 +317,7 @@ async function dispatch(
     );
     // If this logs but no turn.started/reply follows, the session was dispatched
     // but the durable turn never ran (e.g. Vercel Workflow not executing the run).
-    config.log("[sendblue] session started", {
+    config.logDebug("[sendblue] session started", {
       id: session.id,
       token: session.continuationToken,
     });

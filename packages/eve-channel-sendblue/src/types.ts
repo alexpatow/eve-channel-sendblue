@@ -109,6 +109,11 @@ export interface SendblueChannelConfig {
   dryRun?: boolean;
   /** Sink for dry-run and diagnostic logging. @default console.log */
   log?: (message: string, detail?: unknown) => void;
+  /**
+   * Emit verbose per-step traces (inbound, session started, read receipt, reply,
+   * typing, tapback). Failures are always logged regardless. @default false
+   */
+  debug?: boolean;
   /** Override or extend the default session-lifecycle event handlers. */
   events?: ChannelEvents<SendblueContext>;
 }
@@ -128,7 +133,10 @@ export interface ResolvedSendblueConfig {
   readonly typingIndicator: boolean;
   readonly errorMessage: string;
   readonly dryRun: boolean;
+  readonly debug: boolean;
   readonly log: (message: string, detail?: unknown) => void;
+  /** Logs via {@link log} only when {@link debug} is enabled. */
+  readonly logDebug: (message: string, detail?: unknown) => void;
 }
 
 /**
