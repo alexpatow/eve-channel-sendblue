@@ -67,7 +67,7 @@ The handler distinguishes the payload types internally.
 
 - **Inbound + outbound** iMessage and SMS, 1:1 and group threads.
 - **Markdown flattening** so replies read natively on iMessage.
-- **Inbound media** surfaced to the model as file attachments.
+- **Inbound media** surfaced to the model by URL (see the note below).
 - **Tapback reactions**, **typing indicators**, and **read receipts** via the
   thread handle exposed to event handlers.
 - **Proactive sends** through the channel's `receive()` hook (schedules or
@@ -86,6 +86,20 @@ The channel-local raw token addresses a session by line and contact:
 
 `sendblueContinuationToken(from, { contactNumber })` and `decodeContinuationToken`
 are exported for building tokens (for example, to start a proactive session).
+
+## Inbound media
+
+Inbound attachments are passed to the model provider **by URL**, not staged into
+the eve sandbox. Staging wrote a durable `eve-sandbox:` file reference into
+session history whose bytes are gone on the next (fresh-sandbox) invocation, so a
+later turn failed the staging invariant and terminated the whole session. Passing
+the URL keeps a durable reference the provider fetches at model-call time.
+
+Consequence: the model can only "see" an image while its URL is still fetchable.
+Sendblue's inbound `media_url`s expire after ~30 days, so images drop out of
+long-lived conversations. To keep media durable (and private), persist it to your
+own store on receipt and hand the model that URL instead. A hook for this is on
+the roadmap; today you can do it in a custom `onInbound` + `events` setup.
 
 ## Platform limitations
 
