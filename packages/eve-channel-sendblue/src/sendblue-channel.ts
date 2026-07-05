@@ -56,17 +56,33 @@ function initialState(): SendblueChannelState {
 /**
  * Default session-lifecycle handlers. The completed assistant message is sent
  * back over Sendblue; tool-call steps and empty messages are skipped. Failures
- * get a short apology so the person is not left hanging.
+ * get a short apology so the person is not left hanging. When `typingIndicator`
+ * is enabled (the default), the iMessage typing bubble shows while the agent
+ * works on each turn.
  */
-const defaultEvents: ChannelEvents<SendblueContext> = {
-  async "message.completed"(event, channel) {
-    if (event.finishReason === "tool-calls" || !event.message) return;
-    await channel.sendblue.reply(event.message);
-  },
-  async "turn.failed"(_event, channel) {
-    await channel.sendblue.reply("Sorry, I hit an error handling your message. Please try again.");
-  },
-};
+function buildDefaultEvents(config: ResolvedSendblueConfig): ChannelEvents<SendblueContext> {
+  const events: ChannelEvents<SendblueContext> = {
+    async "message.completed"(event, channel) {
+      if (event.finishReason === "tool-calls" || !event.message) return;
+      await channel.sendblue.reply(event.message);
+    },
+    async "turn.failed"(_event, channel) {
+      await channel.sendblue.reply(
+        "Sorry, I hit an error handling your message. Please try again.",
+      );
+    },
+  };
+
+  if (!config.typingIndicator) return events;
+
+  return {
+    ...events,
+    async "turn.started"(_event, channel) {
+      // Show the "…" bubble while the agent works. 1:1 only; never fatal.
+      await channel.sendblue.startTyping().catch(() => {});
+    },
+  };
+}
 
 /**
  * Put your agent on iMessage and SMS through Sendblue. Inbound messages arrive
@@ -82,7 +98,10 @@ export function sendblueChannel(
 ): Channel<SendblueChannelState, SendblueReceiveTarget, SendblueChannelMetadata> {
   const resolved = resolveConfig(config);
   const client = createSendblueClient(resolved);
-  const events: ChannelEvents<SendblueContext> = { ...defaultEvents, ...config.events };
+  const events: ChannelEvents<SendblueContext> = {
+    ...buildDefaultEvents(resolved),
+    ...config.events,
+  };
 
   return defineChannel<
     SendblueChannelState,
@@ -213,10 +232,26 @@ async function dispatch(
 
   const message = buildMessage(payload, inbound.text);
 
+  // Stamp the current thread + message handle onto the auth so tools (e.g. the
+  // tapback tool) can act on the message that triggered this turn. `auth.current`
+  // always reflects the most recent inbound message.
+  const auth = decision.auth
+    ? {
+        ...decision.auth,
+        attributes: {
+          ...decision.auth.attributes,
+          sendblueLine: routing.fromNumber,
+          sendblueContact: routing.contactNumber ?? "",
+          sendblueGroup: routing.groupId ?? "",
+          sendblueMessageHandle: payload.message_handle,
+        },
+      }
+    : null;
+
   await send(
     { message, context: [formatInboundContext(payload)] },
     {
-      auth: decision.auth,
+      auth,
       continuationToken: sendblueContinuationToken(routing.fromNumber, routing),
       state: {
         fromNumber: routing.fromNumber,

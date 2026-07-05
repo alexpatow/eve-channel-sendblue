@@ -1,4 +1,5 @@
 export { sendblueChannel } from "./sendblue-channel.js";
+export { sendblueTapbackTool } from "./tapback-tool.js";
 export { createSendblueClient, type SendblueClient } from "./client.js";
 export { resolveConfig } from "./config.js";
 export { toPlainText } from "./format.js";

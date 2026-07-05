@@ -75,6 +75,7 @@ export function resolveConfig(config: SendblueChannelConfig = {}): ResolvedSendb
         },
       })),
     route: config.route ?? DEFAULT_ROUTE,
+    typingIndicator: config.typingIndicator ?? true,
     dryRun,
     log,
   };

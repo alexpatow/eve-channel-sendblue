@@ -93,6 +93,8 @@ export interface SendblueChannelConfig {
   onInbound?: SendblueOnInbound;
   /** Base path the webhook route mounts under. @default "/eve/v1/sendblue" */
   route?: string;
+  /** Show the iMessage typing bubble while the agent works on a turn (1:1 only). @default true */
+  typingIndicator?: boolean;
   /**
    * Log outbound sends instead of calling the Sendblue API. Auto-enabled when
    * API credentials are missing, so the channel runs with no configuration.
@@ -116,6 +118,7 @@ export interface ResolvedSendblueConfig {
   readonly allowFrom: SendblueAllowFrom;
   readonly onInbound: SendblueOnInbound;
   readonly route: string;
+  readonly typingIndicator: boolean;
   readonly dryRun: boolean;
   readonly log: (message: string, detail?: unknown) => void;
 }

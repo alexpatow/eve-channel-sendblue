@@ -46,6 +46,7 @@
     "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit",
     "test": "bun test",
+    "prepare": "tsup",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
