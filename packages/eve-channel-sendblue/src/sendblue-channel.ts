@@ -61,15 +61,34 @@ function initialState(): SendblueChannelState {
  * works on each turn.
  */
 function buildDefaultEvents(config: ResolvedSendblueConfig): ChannelEvents<SendblueContext> {
+  // Every handler runs through this: a Sendblue API error must be logged, never
+  // thrown, or it fails the whole turn/session (leaving the person with no reply).
+  const safe = async (label: string, run: () => Promise<void>): Promise<void> => {
+    try {
+      await run();
+      config.log(`[sendblue] ${label} ok`);
+    } catch (error) {
+      config.log(`[sendblue] ${label} failed`, {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  };
+
   const events: ChannelEvents<SendblueContext> = {
     async "message.completed"(event, channel) {
       if (event.finishReason === "tool-calls" || !event.message) return;
-      await channel.sendblue.reply(event.message);
+      const message = event.message;
+      config.log("[sendblue] reply →", { chars: message.length });
+      await safe("reply", () => channel.sendblue.reply(message));
     },
+    // A turn failed but the session may recover.
     async "turn.failed"(_event, channel) {
-      await channel.sendblue.reply(
-        "Sorry, I hit an error handling your message. Please try again.",
-      );
+      await safe("error reply", () => channel.sendblue.reply(config.errorMessage));
+    },
+    // Terminal failure (fatal error, retries exhausted). This is the outlet the
+    // person gets when everything else falls over. `session.failed` has no `ctx`.
+    async "session.failed"(_event, channel) {
+      await safe("error reply", () => channel.sendblue.reply(config.errorMessage));
     },
   };
 
@@ -78,10 +97,28 @@ function buildDefaultEvents(config: ResolvedSendblueConfig): ChannelEvents<Sendb
   return {
     ...events,
     async "turn.started"(_event, channel) {
-      // Show the "…" bubble while the agent works. 1:1 only; never fatal.
-      await channel.sendblue.startTyping().catch(() => {});
+      // Best-effort "…" bubble (1:1 only). Bounded so a slow Sendblue call can
+      // never stall the turn, and swallowed so it can never fail it.
+      await safe("typing", () => withTimeout(channel.sendblue.startTyping(), 4000));
     },
   };
+}
+
+/** Reject after `ms` so an outbound call cannot stall a serverless turn. */
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`timed out after ${ms}ms`)), ms);
+    void promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
 }
 
 /**
@@ -220,14 +257,30 @@ async function dispatch(
     raw: payload,
   };
 
+  config.log("[sendblue] inbound", {
+    from: payload.from_number,
+    service: payload.service,
+    handle: payload.message_handle,
+    group: routing.groupId ?? undefined,
+    hasMedia: Boolean(payload.media_url),
+  });
+
   const decision = await config.onInbound(inbound);
-  if (decision === null) return;
+  if (decision === null) {
+    config.log("[sendblue] inbound dropped by onInbound");
+    return;
+  }
 
   // Best-effort read receipt so the sender sees their message land.
   if (routing.contactNumber) {
     client
       .markRead({ fromNumber: routing.fromNumber, contactNumber: routing.contactNumber })
-      .catch(() => {});
+      .then(() => config.log("[sendblue] read receipt ok"))
+      .catch((error) =>
+        config.log("[sendblue] read receipt failed", {
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      );
   }
 
   const message = buildMessage(payload, inbound.text);

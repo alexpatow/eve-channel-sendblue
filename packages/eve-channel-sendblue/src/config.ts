@@ -76,6 +76,8 @@ export function resolveConfig(config: SendblueChannelConfig = {}): ResolvedSendb
       })),
     route: config.route ?? DEFAULT_ROUTE,
     typingIndicator: config.typingIndicator ?? true,
+    errorMessage:
+      config.errorMessage ?? "Sorry, I hit an error handling your message. Please try again.",
     dryRun,
     log,
   };

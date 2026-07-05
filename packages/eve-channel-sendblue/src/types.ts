@@ -96,6 +96,13 @@ export interface SendblueChannelConfig {
   /** Show the iMessage typing bubble while the agent works on a turn (1:1 only). @default true */
   typingIndicator?: boolean;
   /**
+   * Message sent to the person when a turn or session fails, so they are not
+   * left hanging. Set to `""` to stay silent, or override the `turn.failed` /
+   * `session.failed` handlers via `events` for full control.
+   * @default "Sorry, I hit an error handling your message. Please try again."
+   */
+  errorMessage?: string;
+  /**
    * Log outbound sends instead of calling the Sendblue API. Auto-enabled when
    * API credentials are missing, so the channel runs with no configuration.
    */
@@ -119,6 +126,7 @@ export interface ResolvedSendblueConfig {
   readonly onInbound: SendblueOnInbound;
   readonly route: string;
   readonly typingIndicator: boolean;
+  readonly errorMessage: string;
   readonly dryRun: boolean;
   readonly log: (message: string, detail?: unknown) => void;
 }
