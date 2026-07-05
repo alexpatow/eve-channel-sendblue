@@ -1,15 +1,19 @@
-import { sendblueChannel } from "../lib/sendblue/index.js";
+import { sendblueChannel } from "eve-channel-sendblue";
 
 /**
  * Puts this agent on iMessage/SMS via Sendblue.
  *
- * With no `SENDBLUE_API_KEY`/`SENDBLUE_API_SECRET` set, the channel runs in
- * dry-run mode: inbound webhooks drive a real eve session, but outbound replies
- * are logged instead of sent. Set the credentials (and a `fromNumber`) to go
- * live, then point your Sendblue webhooks at `/eve/v1/sendblue/webhook`.
+ * The credentials block below is optional: drop it to rely on `SENDBLUE_API_KEY`,
+ * `SENDBLUE_API_SECRET`, and `SENDBLUE_WEBHOOK_SECRET`. Each field also accepts a
+ * lazy resolver function. With no credentials set, the channel runs in dry-run
+ * mode (inbound webhooks drive a real session; outbound replies are logged).
+ *
+ * Point your Sendblue webhooks at `/eve/v1/sendblue/webhook`.
  */
 export default sendblueChannel({
-  // allowFrom: ["+15551234567"], // lock down who can reach the webhook
-  // webhookSecret: process.env.SENDBLUE_WEBHOOK_SECRET,
-  // allowedServices: ["iMessage", "SMS"],
+  credentials: {
+    apiKey: process.env.SENDBLUE_API_KEY,
+    apiSecret: process.env.SENDBLUE_API_SECRET,
+    webhookSecret: process.env.SENDBLUE_WEBHOOK_SECRET,
+  },
 });

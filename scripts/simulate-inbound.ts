@@ -5,14 +5,18 @@
  *   bun run sim "hello"      # in another terminal
  *
  * Env / args:
- *   EVE_URL   base URL of the dev server (default http://localhost:2000)
+ *   EVE_URL   base URL of the dev server   (default http://localhost:2000)
  *   FROM      the contact texting in       (default +15557654321)
- *   TO        your Sendblue number         (default +14155551234)
+ *   TO        your Sendblue line (E.164)   (default $SENDBLUE_FROM_NUMBER)
  *   arg[0]    the message text             (default "What can you do?")
+ *
+ * TO must be a number registered on your Sendblue account, otherwise a live
+ * (non-dry-run) reply is rejected with "This phone number is not defined". For a
+ * real round-trip, set FROM to a number you control so the reply reaches you.
  */
 const base = process.env.EVE_URL ?? "http://localhost:2000";
 const from = process.env.FROM ?? "+15557654321";
-const to = process.env.TO ?? "+14155551234";
+const to = process.env.TO ?? process.env.SENDBLUE_FROM_NUMBER ?? "+14155551234";
 const text = process.argv[2] ?? "What can you do?";
 const secret = process.env.SENDBLUE_WEBHOOK_SECRET;
 

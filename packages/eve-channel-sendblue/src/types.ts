@@ -58,17 +58,39 @@ export type SendblueOnInbound = (
   message: SendblueInboundMessage,
 ) => { auth: SendblueAuth | null } | null | Promise<{ auth: SendblueAuth | null } | null>;
 
-export interface SendblueChannelConfig {
+/**
+ * A secret value: a plain string, or a lazy (optionally async) resolver. A
+ * resolver is called the first time the secret is needed and its result cached,
+ * so credentials can be fetched from a vault at runtime instead of baked in.
+ */
+export type SendblueSecret =
+  | string
+  | (() => string | undefined | Promise<string | undefined>);
+
+/** Resolved secret accessor with the env fallback already applied. */
+export type SecretResolver = () => Promise<string | null>;
+
+/** Sendblue credentials. Every field is optional and falls back to an env var. */
+export interface SendblueCredentials {
   /** Sendblue API key id. Falls back to `SENDBLUE_API_KEY`. */
-  apiKey?: string;
+  apiKey?: SendblueSecret;
   /** Sendblue API secret. Falls back to `SENDBLUE_API_SECRET`. */
-  apiSecret?: string;
-  /** Registered Sendblue number (E.164) used as the default sender. Falls back to `SENDBLUE_FROM_NUMBER`. */
-  fromNumber?: string;
-  /** Shared secret checked against the webhook header. Falls back to `SENDBLUE_WEBHOOK_SECRET`. */
-  webhookSecret?: string;
+  apiSecret?: SendblueSecret;
+  /** Shared secret for webhook verification. Falls back to `SENDBLUE_WEBHOOK_SECRET`. */
+  webhookSecret?: SendblueSecret;
   /** Header carrying the webhook secret. @default "sb-signing-secret" */
   webhookSecretHeader?: string;
+}
+
+export interface SendblueChannelConfig {
+  /**
+   * API key, API secret, and webhook secret. Drop the block to rely on
+   * `SENDBLUE_API_KEY`, `SENDBLUE_API_SECRET`, and `SENDBLUE_WEBHOOK_SECRET`.
+   * Each field also accepts a lazy resolver function.
+   */
+  credentials?: SendblueCredentials;
+  /** Registered Sendblue number (E.164) used as the default sender. Falls back to `SENDBLUE_FROM_NUMBER`. */
+  fromNumber?: string;
   /** URL Sendblue posts outbound delivery status to. Falls back to `SENDBLUE_STATUS_CALLBACK_URL`. */
   statusCallbackUrl?: string;
   /** Inbound services to accept. @default ["iMessage"] */
@@ -90,13 +112,13 @@ export interface SendblueChannelConfig {
   events?: ChannelEvents<SendblueContext>;
 }
 
-/** Fully resolved config with env fallbacks applied. */
+/** Fully resolved config: secrets become memoized async resolvers. */
 export interface ResolvedSendblueConfig {
-  readonly apiKey: string | null;
-  readonly apiSecret: string | null;
-  readonly fromNumber: string | null;
-  readonly webhookSecret: string | null;
+  readonly apiKey: SecretResolver;
+  readonly apiSecret: SecretResolver;
+  readonly webhookSecret: SecretResolver;
   readonly webhookSecretHeader: string;
+  readonly fromNumber: string | null;
   readonly statusCallbackUrl: string | null;
   readonly allowedServices: readonly SendblueService[];
   readonly allowFrom: SendblueAllowFrom;

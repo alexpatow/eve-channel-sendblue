@@ -9,13 +9,14 @@ import type {
  * Verify the shared-secret header on an inbound webhook. Returns `true` when no
  * secret is configured (verification disabled) or when the header matches.
  */
-export function verifyWebhookSecret(
+export async function verifyWebhookSecret(
   req: Request,
   config: ResolvedSendblueConfig,
-): boolean {
-  if (!config.webhookSecret) return true;
+): Promise<boolean> {
+  const secret = await config.webhookSecret();
+  if (!secret) return true;
   const provided = req.headers.get(config.webhookSecretHeader);
-  return provided === config.webhookSecret;
+  return provided === secret;
 }
 
 export function isTypingPayload(body: unknown): body is SendblueTypingPayload {

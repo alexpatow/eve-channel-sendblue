@@ -160,7 +160,7 @@ function handleWebhook(config: ResolvedSendblueConfig, client: SendblueClient) {
     req: Request,
     { send, waitUntil }: RouteHandlerArgs<SendblueChannelState>,
   ): Promise<Response> => {
-    if (!verifyWebhookSecret(req, config)) {
+    if (!(await verifyWebhookSecret(req, config))) {
       return new Response("Unauthorized", { status: 401 });
     }
 

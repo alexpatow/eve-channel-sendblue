@@ -3,10 +3,26 @@
 A runnable [eve](https://eve.dev) app that puts an agent on **iMessage and SMS**
 through [Sendblue](https://sendblue.co), implemented as a custom eve channel.
 
-This repo is the testbed. The channel itself lives in
-[`agent/lib/sendblue/`](agent/lib/sendblue) as a self-contained module so it can
-later be lifted into its own published package with no changes to the agent
-wiring.
+This repo is the testbed. The channel itself is a self-contained local package,
+[`packages/eve-channel-sendblue`](packages/eve-channel-sendblue), consumed by the
+agent exactly like a published channel would be:
+
+```ts title="agent/channels/sendblue.ts"
+import { sendblueChannel } from "eve-channel-sendblue";
+
+export default sendblueChannel({
+  credentials: {
+    apiKey: process.env.SENDBLUE_API_KEY,
+    apiSecret: process.env.SENDBLUE_API_SECRET,
+    webhookSecret: process.env.SENDBLUE_WEBHOOK_SECRET,
+  },
+});
+```
+
+The `credentials` block is optional: drop it to fall back to `SENDBLUE_API_KEY`,
+`SENDBLUE_API_SECRET`, and `SENDBLUE_WEBHOOK_SECRET`. Each field also accepts a
+lazy resolver function. Lifting the package into its own repo needs no changes to
+the agent wiring.
 
 ## How it works
 
@@ -29,15 +45,17 @@ agent/
   channels/
     eve.ts            # default eve HTTP channel (scaffolded)
     sendblue.ts       # mounts the Sendblue channel (thin wiring)
-  lib/sendblue/       # the reusable channel — future standalone package
+packages/eve-channel-sendblue/   # the reusable channel — future standalone package
+  src/
     sendblue-channel.ts   # sendblueChannel() factory
-    client.ts             # Sendblue SDK transport (+ dry-run client)
+    client.ts             # lazy Sendblue SDK transport (+ dry-run fallback)
+    config.ts             # credential resolution + env fallback
     context.ts            # per-thread send/typing/reaction handle
     webhook.ts            # payload guards, signature + sender checks
     continuation-token.ts # session addressing
     format.ts             # Markdown → plain text for iMessage
     reactions.ts          # tapback aliases
-    config.ts / types.ts
+    types.ts
 scripts/
   simulate-inbound.ts # POST a fake inbound message to the dev server
 ```

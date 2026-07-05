@@ -19,9 +19,10 @@ export interface SendResult {
 }
 
 /**
- * Thin transport over the official Sendblue SDK. A single interface backs both
- * the live client and the dry-run client so the channel logic never branches on
- * which one it holds.
+ * Thin transport over the official Sendblue SDK. Credentials resolve lazily on
+ * first use; when they resolve empty (or `dryRun` is set), every call logs its
+ * payload and returns a synthetic handle instead of hitting the API, so the
+ * channel runs end to end with no account.
  */
 export interface SendblueClient {
   sendText(params: SendTextParams): Promise<SendResult>;
@@ -36,26 +37,47 @@ export interface SendblueClient {
   evaluateService(
     number: string,
   ): Promise<{ number?: string; service?: "iMessage" | "SMS" }>;
-  /** Direct access to the official Sendblue SDK, or `null` in dry-run mode. */
-  readonly sdk: SendblueAPI | null;
+  /** The official Sendblue SDK once credentials resolve, or `null` in dry-run. */
+  getSdk(): Promise<SendblueAPI | null>;
 }
 
 export function createSendblueClient(config: ResolvedSendblueConfig): SendblueClient {
-  return config.dryRun
-    ? createDryRunClient(config)
-    : createLiveClient(config);
-}
+  let sdkPromise: Promise<SendblueAPI | null> | null = null;
 
-function createLiveClient(config: ResolvedSendblueConfig): SendblueClient {
-  const sdk = new SendblueAPI({
-    apiKey: config.apiKey ?? undefined,
-    apiSecret: config.apiSecret ?? undefined,
-  });
+  const getSdk = (): Promise<SendblueAPI | null> => {
+    if (config.dryRun) return Promise.resolve(null);
+    if (!sdkPromise) {
+      sdkPromise = (async () => {
+        const [apiKey, apiSecret] = await Promise.all([
+          config.apiKey(),
+          config.apiSecret(),
+        ]);
+        if (!apiKey || !apiSecret) {
+          config.log(
+            "[sendblue] Credentials unavailable — falling back to dry-run (outbound messages are logged, not sent).",
+          );
+          return null;
+        }
+        return new SendblueAPI({ apiKey, apiSecret });
+      })();
+    }
+    return sdkPromise;
+  };
+
+  const dryHandle = () => `dry-${Math.round(performance.now())}`;
 
   return {
-    sdk,
+    getSdk,
 
     async sendText({ fromNumber, contactNumber, content, mediaUrl }) {
+      const sdk = await getSdk();
+      if (!sdk) {
+        config.log(`[sendblue:dry-run] SEND ${fromNumber} → ${contactNumber}`, {
+          content,
+          ...(mediaUrl ? { mediaUrl } : {}),
+        });
+        return { messageHandle: dryHandle() };
+      }
       const response = await sdk.messages.send({
         number: contactNumber,
         from_number: fromNumber,
@@ -69,6 +91,13 @@ function createLiveClient(config: ResolvedSendblueConfig): SendblueClient {
     },
 
     async sendGroup({ fromNumber, groupId, content }) {
+      const sdk = await getSdk();
+      if (!sdk) {
+        config.log(`[sendblue:dry-run] SEND ${fromNumber} → group ${groupId}`, {
+          content,
+        });
+        return { messageHandle: dryHandle() };
+      }
       const response = await sdk.groups.sendMessage({
         from_number: fromNumber,
         content,
@@ -78,6 +107,11 @@ function createLiveClient(config: ResolvedSendblueConfig): SendblueClient {
     },
 
     async startTyping({ fromNumber, contactNumber }) {
+      const sdk = await getSdk();
+      if (!sdk) {
+        config.log(`[sendblue:dry-run] TYPING → ${contactNumber}`);
+        return;
+      }
       try {
         await sdk.typingIndicators.send({
           number: contactNumber,
@@ -97,59 +131,34 @@ function createLiveClient(config: ResolvedSendblueConfig): SendblueClient {
     },
 
     async markRead({ fromNumber, contactNumber }) {
+      const sdk = await getSdk();
+      if (!sdk) {
+        config.log(`[sendblue:dry-run] MARK READ → ${contactNumber}`);
+        return;
+      }
       await sdk.post("/api/mark-read", {
         body: { number: contactNumber, from_number: fromNumber },
       });
     },
 
     async addReaction({ fromNumber, messageHandle, reaction }) {
+      const sdk = await getSdk();
+      if (!sdk) {
+        config.log(`[sendblue:dry-run] REACT ${reaction} → ${messageHandle}`);
+        return;
+      }
       await sdk.post("/api/send-reaction", {
         body: { from_number: fromNumber, message_handle: messageHandle, reaction },
       });
     },
 
     async evaluateService(number) {
+      const sdk = await getSdk();
+      if (!sdk) {
+        config.log(`[sendblue:dry-run] LOOKUP ${number}`);
+        return { number, service: "iMessage" };
+      }
       return sdk.lookups.lookupNumber({ number });
-    },
-  };
-}
-
-function createDryRunClient(config: ResolvedSendblueConfig): SendblueClient {
-  const dryHandle = () => `dry-${Math.round(performance.now())}`;
-
-  return {
-    sdk: null,
-
-    async sendText({ fromNumber, contactNumber, content, mediaUrl }) {
-      config.log(`[sendblue:dry-run] SEND ${fromNumber} → ${contactNumber}`, {
-        content,
-        ...(mediaUrl ? { mediaUrl } : {}),
-      });
-      return { messageHandle: dryHandle() };
-    },
-
-    async sendGroup({ fromNumber, groupId, content }) {
-      config.log(`[sendblue:dry-run] SEND ${fromNumber} → group ${groupId}`, {
-        content,
-      });
-      return { messageHandle: dryHandle() };
-    },
-
-    async startTyping({ contactNumber }) {
-      config.log(`[sendblue:dry-run] TYPING → ${contactNumber}`);
-    },
-
-    async markRead({ contactNumber }) {
-      config.log(`[sendblue:dry-run] MARK READ → ${contactNumber}`);
-    },
-
-    async addReaction({ messageHandle, reaction }) {
-      config.log(`[sendblue:dry-run] REACT ${reaction} → ${messageHandle}`);
-    },
-
-    async evaluateService(number) {
-      config.log(`[sendblue:dry-run] LOOKUP ${number}`);
-      return { number, service: "iMessage" };
     },
   };
 }
