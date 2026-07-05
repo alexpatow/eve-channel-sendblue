@@ -34,8 +34,12 @@ jobs:
           bun run lint
           bun run build
 
-      - name: Publish to npm
-        run: npm publish --provenance --access public
+      # Trusted publishing: no NPM_TOKEN. GitHub mints a short-lived OIDC
+      # credential per run; provenance is attached automatically. Requires a
+      # trusted publisher configured on npmjs.com for this package + workflow,
+      # and npm >= 11.5.1.
+      - name: Publish to npm (OIDC trusted publishing)
         working-directory: packages/eve-channel-sendblue
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          npm install -g npm@latest
+          npm publish --access public
