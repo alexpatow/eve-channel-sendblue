@@ -20,10 +20,11 @@ jobs:
         with:
           bun-version: latest
 
-      - uses: actions/setup-node@v4
+      # No registry-url: it writes an _authToken line into .npmrc that blocks
+      # OIDC trusted publishing. Without it, npm falls through to OIDC.
+      - uses: actions/setup-node@v6
         with:
           node-version: 24
-          registry-url: https://registry.npmjs.org
 
       - name: Install
         run: bun install --frozen-lockfile
