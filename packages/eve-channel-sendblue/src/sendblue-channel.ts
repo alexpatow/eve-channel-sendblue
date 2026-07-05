@@ -301,19 +301,31 @@ async function dispatch(
       }
     : null;
 
-  await send(
-    { message, context: [formatInboundContext(payload)] },
-    {
-      auth,
-      continuationToken: sendblueContinuationToken(routing.fromNumber, routing),
-      state: {
-        fromNumber: routing.fromNumber,
-        contactNumber: routing.contactNumber ?? null,
-        groupId: routing.groupId ?? null,
-        lastMessageHandle: null,
+  try {
+    const session = await send(
+      { message, context: [formatInboundContext(payload)] },
+      {
+        auth,
+        continuationToken: sendblueContinuationToken(routing.fromNumber, routing),
+        state: {
+          fromNumber: routing.fromNumber,
+          contactNumber: routing.contactNumber ?? null,
+          groupId: routing.groupId ?? null,
+          lastMessageHandle: null,
+        },
       },
-    },
-  );
+    );
+    // If this logs but no turn.started/reply follows, the session was dispatched
+    // but the durable turn never ran (e.g. Vercel Workflow not executing the run).
+    config.log("[sendblue] session started", {
+      id: session.id,
+      token: session.continuationToken,
+    });
+  } catch (error) {
+    config.log("[sendblue] send failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 }
 
 function buildMessage(payload: SendblueMessagePayload, text: string): string | UserContent {
