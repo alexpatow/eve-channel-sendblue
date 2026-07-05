@@ -6,6 +6,8 @@ resume an eve session; the agent's reply is sent back over the same line. Group
 chats, inbound media, tapback reactions, typing indicators, and read receipts
 are all supported.
 
+Inspired by [@pontusab's](https://x.com/pontusab) Chat SDK Adapter: https://github.com/sendblue-api/chat-adapter-sendblue
+
 This repository is the home of the `eve-channel-sendblue` package. It is a
 [bun](https://bun.sh) workspace with two members:
 

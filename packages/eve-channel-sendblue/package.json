@@ -10,9 +10,21 @@
     "sendblue",
     "sms"
   ],
+  "homepage": "https://github.com/alexpatow/eve-channel-sendblue/tree/main/packages/eve-channel-sendblue#readme",
+  "bugs": {
+    "url": "https://github.com/alexpatow/eve-channel-sendblue/issues"
+  },
   "license": "MIT",
+  "author": "Alex Patow",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alexpatow/eve-channel-sendblue.git",
+    "directory": "packages/eve-channel-sendblue"
+  },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
   "type": "module",
   "main": "./dist/index.js",
@@ -33,7 +45,8 @@
     "dev": "tsup --watch",
     "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit",
-    "test": "bun test"
+    "test": "bun test",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "sendblue": "^3.10.1"
@@ -48,5 +61,8 @@
   "peerDependencies": {
     "ai": "^7.0.0",
     "eve": ">=0.19.0"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }
