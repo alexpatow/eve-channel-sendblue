@@ -162,12 +162,12 @@ export function sendblueChannel(
       return buildContext(state, client, resolved);
     },
 
-    async fetchFile(url) {
-      if (!/^https?:\/\//.test(url)) return null;
-      const res = await fetch(url);
-      if (!res.ok) return null;
-      return Buffer.from(await res.arrayBuffer());
-    },
+    // Pass inbound media to the model provider by URL rather than staging bytes
+    // to the sandbox. Staging created a durable `eve-sandbox:` ref whose bytes
+    // vanish on the next (fresh-sandbox) invocation, so a later turn failed the
+    // "every ref has bytes on disk" invariant, killed the turn fatally, and
+    // terminated the whole session. Returning null keeps a durable URL instead.
+    fetchFile: () => Promise.resolve(null),
 
     routes: [POST(`${resolved.route}/webhook`, handleWebhook(resolved, client))],
 
