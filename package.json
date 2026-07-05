@@ -11,7 +11,7 @@
     "build": "bun run --filter eve-channel-sendblue build",
     "dev": "bun run --filter eve-channel-sendblue build && bun run --filter basic dev",
     "sim": "bun run --filter basic sim",
-    "typecheck": "bun run --filter '*' typecheck",
+    "typecheck": "bun run build && bun run --filter '*' typecheck",
     "test": "bun run --filter eve-channel-sendblue test",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",

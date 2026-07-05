@@ -28,11 +28,10 @@ jobs:
       - name: Install
         run: bun install --frozen-lockfile
 
-      - name: Typecheck, lint, build
+      - name: Typecheck and lint
         run: |
           bun run typecheck
           bun run lint
-          bun run build
 
       # Trusted publishing: no NPM_TOKEN. GitHub mints a short-lived OIDC
       # credential per run; provenance is attached automatically. Requires a
