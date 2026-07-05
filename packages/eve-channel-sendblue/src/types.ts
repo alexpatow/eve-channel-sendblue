@@ -7,13 +7,7 @@ import type { ChannelEvents } from "eve/channels";
 export type SendblueService = "iMessage" | "SMS" | "RCS" | "sms";
 
 /** A tapback reaction Sendblue understands. */
-export type SendblueReaction =
-  | "love"
-  | "like"
-  | "dislike"
-  | "laugh"
-  | "emphasize"
-  | "question";
+export type SendblueReaction = "love" | "like" | "dislike" | "laugh" | "emphasize" | "question";
 
 /** A concrete allow-list value: a single number, a list, or the wildcard. */
 export type SendblueAllowValue = string | readonly string[] | "*";
@@ -63,9 +57,7 @@ export type SendblueOnInbound = (
  * resolver is called the first time the secret is needed and its result cached,
  * so credentials can be fetched from a vault at runtime instead of baked in.
  */
-export type SendblueSecret =
-  | string
-  | (() => string | undefined | Promise<string | undefined>);
+export type SendblueSecret = string | (() => string | undefined | Promise<string | undefined>);
 
 /** Resolved secret accessor with the env fallback already applied. */
 export type SecretResolver = () => Promise<string | null>;

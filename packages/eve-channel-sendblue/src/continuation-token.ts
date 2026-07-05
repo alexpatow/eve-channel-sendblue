@@ -44,16 +44,13 @@ export function routingFromPayload(payload: SendblueMessagePayload): {
   groupId?: string;
 } {
   const fromNumber =
-    payload.sendblue_number ??
-    (payload.is_outbound ? payload.from_number : payload.to_number);
+    payload.sendblue_number ?? (payload.is_outbound ? payload.from_number : payload.to_number);
 
   if (payload.group_id && payload.group_id.length > 0) {
     return { fromNumber, groupId: payload.group_id };
   }
 
-  const contactNumber = payload.is_outbound
-    ? payload.to_number
-    : payload.from_number;
+  const contactNumber = payload.is_outbound ? payload.to_number : payload.from_number;
 
   return { fromNumber, contactNumber };
 }

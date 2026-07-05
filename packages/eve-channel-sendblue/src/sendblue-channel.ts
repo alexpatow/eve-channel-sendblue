@@ -10,10 +10,7 @@ import {
 import { createSendblueClient, type SendblueClient } from "./client.js";
 import { resolveConfig } from "./config.js";
 import { buildContext } from "./context.js";
-import {
-  routingFromPayload,
-  sendblueContinuationToken,
-} from "./continuation-token.js";
+import { routingFromPayload, sendblueContinuationToken } from "./continuation-token.js";
 import type {
   ResolvedSendblueConfig,
   SendblueChannelConfig,
@@ -67,9 +64,7 @@ const defaultEvents: ChannelEvents<SendblueContext> = {
     await channel.sendblue.reply(event.message);
   },
   async "turn.failed"(_event, channel) {
-    await channel.sendblue.reply(
-      "Sorry, I hit an error handling your message. Please try again.",
-    );
+    await channel.sendblue.reply("Sorry, I hit an error handling your message. Please try again.");
   },
 };
 
@@ -121,8 +116,7 @@ export function sendblueChannel(
     routes: [POST(`${resolved.route}/webhook`, handleWebhook(resolved, client))],
 
     async receive(input, { send }) {
-      const fromNumber =
-        input.target.fromNumber ?? resolved.fromNumber ?? undefined;
+      const fromNumber = input.target.fromNumber ?? resolved.fromNumber ?? undefined;
       if (!fromNumber) {
         throw new Error(
           "sendblueChannel.receive requires target.fromNumber or a configured fromNumber.",
@@ -131,9 +125,7 @@ export function sendblueChannel(
       const contactNumber = input.target.contactNumber;
       const groupId = input.target.groupId;
       if (!contactNumber && !groupId) {
-        throw new Error(
-          "sendblueChannel.receive requires target.contactNumber or target.groupId.",
-        );
+        throw new Error("sendblueChannel.receive requires target.contactNumber or target.groupId.");
       }
 
       return send(input.message, {
@@ -236,10 +228,7 @@ async function dispatch(
   );
 }
 
-function buildMessage(
-  payload: SendblueMessagePayload,
-  text: string,
-): string | UserContent {
+function buildMessage(payload: SendblueMessagePayload, text: string): string | UserContent {
   if (!payload.media_url) return text;
 
   const filePart: FilePart = {

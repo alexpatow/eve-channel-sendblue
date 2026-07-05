@@ -1,37 +1,28 @@
 {
-  "name": "sendblue-testbed",
+  "name": "eve-channel-sendblue-repo",
   "version": "0.0.0",
-  "type": "module",
-  "imports": {
-    "#*": "./agent/*",
-    "#evals/*": "./evals/*"
-  },
+  "private": true,
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "examples/*"
   ],
+  "type": "module",
   "scripts": {
-    "build": "eve build",
-    "dev": "eve dev",
-    "start": "eve start",
-    "sim": "bun scripts/simulate-inbound.ts",
-    "typecheck": "tsc"
-  },
-  "dependencies": {
-    "@vercel/connect": "0.2.2",
-    "ai": "^7.0.0",
-    "eve": "^0.19.0",
-    "eve-channel-sendblue": "workspace:*",
-    "sendblue": "^3.10.1",
-    "zod": "4.4.3"
+    "build": "bun run --filter eve-channel-sendblue build",
+    "dev": "bun run --filter eve-channel-sendblue build && bun run --filter basic dev",
+    "sim": "bun run --filter basic sim",
+    "typecheck": "bun run --filter '*' typecheck",
+    "test": "bun run --filter eve-channel-sendblue test",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "format": "oxfmt .",
+    "format:check": "oxfmt --check ."
   },
   "devDependencies": {
-    "@types/node": "24.x",
-    "typescript": "7.0.1-rc"
+    "oxfmt": "^0.57.0",
+    "oxlint": "^1.72.0"
   },
   "overrides": {
     "ai": "^7.0.0"
-  },
-  "engines": {
-    "node": "24.x"
   }
 }

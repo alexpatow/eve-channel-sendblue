@@ -32,10 +32,7 @@ export function toPlainText(text: string): string {
     .replace(/^\s*[-*+]\s+/gm, "• ")
     .trim();
 
-  result = result.replace(
-    /%%URLPH(\d+)%%/g,
-    (_, idx) => urlPlaceholders[Number(idx)] ?? "",
-  );
+  result = result.replace(/%%URLPH(\d+)%%/g, (_, idx) => urlPlaceholders[Number(idx)] ?? "");
 
   return result;
 }

@@ -81,8 +81,7 @@ export function buildContext(
     },
 
     async addReaction(messageHandle, reaction) {
-      const resolved =
-        typeof reaction === "string" ? resolveReaction(reaction) : null;
+      const resolved = typeof reaction === "string" ? resolveReaction(reaction) : null;
       if (!resolved) {
         config.log("[sendblue] unsupported reaction, ignoring", { reaction });
         return;

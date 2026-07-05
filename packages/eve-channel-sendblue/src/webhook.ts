@@ -37,13 +37,8 @@ export function isMessagePayload(body: unknown): body is SendblueMessagePayload 
   );
 }
 
-export function isServiceAllowed(
-  service: string,
-  config: ResolvedSendblueConfig,
-): boolean {
-  return config.allowedServices.some(
-    (s) => s.toLowerCase() === service.toLowerCase(),
-  );
+export function isServiceAllowed(service: string, config: ResolvedSendblueConfig): boolean {
+  return config.allowedServices.some((s) => s.toLowerCase() === service.toLowerCase());
 }
 
 /** Resolve an {@link SendblueAllowFrom} policy against a sender number. */

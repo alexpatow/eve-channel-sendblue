@@ -34,11 +34,14 @@ export interface SendblueClient {
     messageHandle: string;
     reaction: SendblueReaction;
   }): Promise<void>;
-  evaluateService(
-    number: string,
-  ): Promise<{ number?: string; service?: "iMessage" | "SMS" }>;
+  evaluateService(number: string): Promise<{ number?: string; service?: "iMessage" | "SMS" }>;
   /** The official Sendblue SDK once credentials resolve, or `null` in dry-run. */
   getSdk(): Promise<SendblueAPI | null>;
+}
+
+/** A synthetic message handle returned by dry-run sends. */
+function dryHandle(): string {
+  return `dry-${Math.round(performance.now())}`;
 }
 
 export function createSendblueClient(config: ResolvedSendblueConfig): SendblueClient {
@@ -48,10 +51,7 @@ export function createSendblueClient(config: ResolvedSendblueConfig): SendblueCl
     if (config.dryRun) return Promise.resolve(null);
     if (!sdkPromise) {
       sdkPromise = (async () => {
-        const [apiKey, apiSecret] = await Promise.all([
-          config.apiKey(),
-          config.apiSecret(),
-        ]);
+        const [apiKey, apiSecret] = await Promise.all([config.apiKey(), config.apiSecret()]);
         if (!apiKey || !apiSecret) {
           config.log(
             "[sendblue] Credentials unavailable — falling back to dry-run (outbound messages are logged, not sent).",
@@ -63,8 +63,6 @@ export function createSendblueClient(config: ResolvedSendblueConfig): SendblueCl
     }
     return sdkPromise;
   };
-
-  const dryHandle = () => `dry-${Math.round(performance.now())}`;
 
   return {
     getSdk,
@@ -83,9 +81,7 @@ export function createSendblueClient(config: ResolvedSendblueConfig): SendblueCl
         from_number: fromNumber,
         content,
         media_url: mediaUrl,
-        ...(config.statusCallbackUrl
-          ? { status_callback: config.statusCallbackUrl }
-          : {}),
+        ...(config.statusCallbackUrl ? { status_callback: config.statusCallbackUrl } : {}),
       });
       return { messageHandle: response.message_handle ?? null };
     },

@@ -18,10 +18,7 @@ function env(name: string): string | null {
  * Wrap a secret (string, resolver, or undefined) into a memoized async accessor
  * that applies the env fallback. The resolver runs at most once.
  */
-function secretResolver(
-  value: SendblueSecret | undefined,
-  envName: string,
-): SecretResolver {
+function secretResolver(value: SendblueSecret | undefined, envName: string): SecretResolver {
   let cached: Promise<string | null> | null = null;
   return () => {
     if (!cached) {
@@ -41,9 +38,7 @@ function secretResolver(
  * credential is a resolver function, the channel assumes it intends to go live
  * and defers the decision to first use.
  */
-export function resolveConfig(
-  config: SendblueChannelConfig = {},
-): ResolvedSendblueConfig {
+export function resolveConfig(config: SendblueChannelConfig = {}): ResolvedSendblueConfig {
   const log = config.log ?? ((message, detail) => console.log(message, detail ?? ""));
   const credentials = config.credentials ?? {};
 
@@ -64,8 +59,7 @@ export function resolveConfig(
     apiKey: secretResolver(credentials.apiKey, "SENDBLUE_API_KEY"),
     apiSecret: secretResolver(credentials.apiSecret, "SENDBLUE_API_SECRET"),
     webhookSecret: secretResolver(credentials.webhookSecret, "SENDBLUE_WEBHOOK_SECRET"),
-    webhookSecretHeader:
-      credentials.webhookSecretHeader ?? DEFAULT_WEBHOOK_SECRET_HEADER,
+    webhookSecretHeader: credentials.webhookSecretHeader ?? DEFAULT_WEBHOOK_SECRET_HEADER,
     fromNumber: config.fromNumber ?? env("SENDBLUE_FROM_NUMBER"),
     statusCallbackUrl: config.statusCallbackUrl ?? env("SENDBLUE_STATUS_CALLBACK_URL"),
     allowedServices: config.allowedServices ?? DEFAULT_ALLOWED_SERVICES,
