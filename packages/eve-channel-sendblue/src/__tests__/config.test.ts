@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { resolveConfig } from "../config.js";
+import { assertWebhookSecurity, resolveConfig } from "../config.js";
 
 const ENV_KEYS = [
   "SENDBLUE_API_KEY",
@@ -80,5 +80,36 @@ describe("resolveConfig", () => {
     });
     on.logDebug("yep");
     expect(seen).toEqual(["yep"]);
+  });
+});
+
+describe("assertWebhookSecurity", () => {
+  test("throws when required (default) but no secret is configured", () => {
+    expect(() => assertWebhookSecurity({ credentials: { apiKey: "k", apiSecret: "s" } })).toThrow(
+      /required but no secret/i,
+    );
+    expect(() => assertWebhookSecurity({})).toThrow(/required but no secret/i);
+  });
+
+  test("throws on the contradictory disabled-but-secret-provided combo", () => {
+    expect(() =>
+      assertWebhookSecurity({
+        credentials: { webhookSecret: "x" },
+        requireWebhookSecret: false,
+      }),
+    ).toThrow(/requireWebhookSecret is false but a webhook secret/i);
+  });
+
+  test("accepts a secret (string or resolver) when required", () => {
+    expect(() => assertWebhookSecurity({ credentials: { webhookSecret: "x" } })).not.toThrow();
+    expect(() =>
+      assertWebhookSecurity({ credentials: { webhookSecret: () => "x" } }),
+    ).not.toThrow();
+    process.env.SENDBLUE_WEBHOOK_SECRET = "from-env";
+    expect(() => assertWebhookSecurity({})).not.toThrow();
+  });
+
+  test("accepts explicit opt-out with no secret", () => {
+    expect(() => assertWebhookSecurity({ requireWebhookSecret: false })).not.toThrow();
   });
 });

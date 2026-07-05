@@ -62,6 +62,7 @@ export function resolveConfig(config: SendblueChannelConfig = {}): ResolvedSendb
     apiSecret: secretResolver(credentials.apiSecret, "SENDBLUE_API_SECRET"),
     webhookSecret: secretResolver(credentials.webhookSecret, "SENDBLUE_WEBHOOK_SECRET"),
     webhookSecretHeader: credentials.webhookSecretHeader ?? DEFAULT_WEBHOOK_SECRET_HEADER,
+    requireWebhookSecret: config.requireWebhookSecret ?? true,
     fromNumber: config.fromNumber ?? env("SENDBLUE_FROM_NUMBER"),
     statusCallbackUrl: config.statusCallbackUrl ?? env("SENDBLUE_STATUS_CALLBACK_URL"),
     allowedServices: config.allowedServices ?? DEFAULT_ALLOWED_SERVICES,
@@ -88,4 +89,35 @@ export function resolveConfig(config: SendblueChannelConfig = {}): ResolvedSendb
       if (debug) log(message, detail);
     },
   };
+}
+
+/**
+ * Enforce a coherent, safe webhook-verification setup at channel construction.
+ * Throws (fail closed) unless exactly one is true: a secret is configured, or
+ * verification is explicitly disabled. Called by `sendblueChannel` only, not by
+ * the tapback tool, which never serves the webhook.
+ */
+export function assertWebhookSecurity(config: SendblueChannelConfig): void {
+  const credentials = config.credentials ?? {};
+  // A resolver function counts as "configured"; its runtime value is verified
+  // per request (an empty result still fails closed when required).
+  const configured =
+    credentials.webhookSecret !== undefined || env("SENDBLUE_WEBHOOK_SECRET") !== null;
+  const required = config.requireWebhookSecret ?? true;
+
+  if (required && !configured) {
+    throw new Error(
+      "sendblueChannel: webhook verification is required but no secret is configured. " +
+        "Set SENDBLUE_WEBHOOK_SECRET (or credentials.webhookSecret) and the same secret in " +
+        "Sendblue, or pass requireWebhookSecret: false to run the webhook unauthenticated " +
+        "(not recommended).",
+    );
+  }
+  if (!required && configured) {
+    throw new Error(
+      "sendblueChannel: requireWebhookSecret is false but a webhook secret was provided. " +
+        "These conflict. Remove the secret to run the webhook open, or set " +
+        "requireWebhookSecret: true (the default) to verify it.",
+    );
+  }
 }

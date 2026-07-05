@@ -56,14 +56,25 @@ describe("isSenderAllowed", () => {
 });
 
 describe("verifyWebhookSecret", () => {
-  test("allows everything when no secret is configured", async () => {
-    expect(await verifyWebhookSecret(request(), live())).toBe(true);
+  test("allows everything only when verification is explicitly disabled", async () => {
+    const open = live({ requireWebhookSecret: false });
+    expect(await verifyWebhookSecret(request(), open)).toBe(true);
   });
 
-  test("checks the signing header when a secret is set", async () => {
+  test("fails closed when required but no secret resolves", async () => {
+    const c = live({
+      credentials: { apiKey: "k", apiSecret: "s", webhookSecret: () => undefined },
+      requireWebhookSecret: true,
+    });
+    expect(await verifyWebhookSecret(request(), c)).toBe(false);
+    expect(await verifyWebhookSecret(request("anything"), c)).toBe(false);
+  });
+
+  test("checks the signing header (constant-time) when a secret is set", async () => {
     const c = live({ credentials: { apiKey: "k", apiSecret: "s", webhookSecret: "sekret" } });
     expect(await verifyWebhookSecret(request("sekret"), c)).toBe(true);
     expect(await verifyWebhookSecret(request("wrong"), c)).toBe(false);
+    expect(await verifyWebhookSecret(request("sekre"), c)).toBe(false); // length differs
     expect(await verifyWebhookSecret(request(), c)).toBe(false);
   });
 });

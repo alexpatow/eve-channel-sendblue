@@ -102,6 +102,13 @@ export interface SendblueChannelConfig {
    * Each field also accepts a lazy resolver function.
    */
   credentials?: SendblueCredentials;
+  /**
+   * Reject inbound webhooks that fail secret verification. Defaults to `true`
+   * (fail closed): a webhook secret must be configured, or the channel throws on
+   * construction. Set to `false` to run the webhook unauthenticated, in which
+   * case you must NOT also provide a secret (that contradiction throws too).
+   */
+  requireWebhookSecret?: boolean;
   /** Registered Sendblue number (E.164) used as the default sender. Falls back to `SENDBLUE_FROM_NUMBER`. */
   fromNumber?: string;
   /** URL Sendblue posts outbound delivery status to. Falls back to `SENDBLUE_STATUS_CALLBACK_URL`. */
@@ -150,6 +157,7 @@ export interface ResolvedSendblueConfig {
   readonly apiSecret: SecretResolver;
   readonly webhookSecret: SecretResolver;
   readonly webhookSecretHeader: string;
+  readonly requireWebhookSecret: boolean;
   readonly fromNumber: string | null;
   readonly statusCallbackUrl: string | null;
   readonly allowedServices: readonly SendblueService[];

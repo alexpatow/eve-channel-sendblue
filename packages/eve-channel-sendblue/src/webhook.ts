@@ -1,3 +1,4 @@
+import { createHash, timingSafeEqual } from "node:crypto";
 import type {
   ResolvedSendblueConfig,
   SendblueAllowFrom,
@@ -6,17 +7,30 @@ import type {
 } from "./types.js";
 
 /**
- * Verify the shared-secret header on an inbound webhook. Returns `true` when no
- * secret is configured (verification disabled) or when the header matches.
+ * Constant-time string compare. Both inputs are SHA-256'd to a fixed length
+ * first, so neither the outcome nor the operands' lengths leak through timing.
+ */
+function timingSafeEqualStr(a: string, b: string): boolean {
+  const ah = createHash("sha256").update(a).digest();
+  const bh = createHash("sha256").update(b).digest();
+  return timingSafeEqual(ah, bh);
+}
+
+/**
+ * Verify the shared-secret header on an inbound webhook. When no secret resolves,
+ * the result depends on `requireWebhookSecret`: fail closed (reject) when
+ * required, allow when verification is explicitly disabled. A configured secret
+ * is compared to the header in constant time.
  */
 export async function verifyWebhookSecret(
   req: Request,
   config: ResolvedSendblueConfig,
 ): Promise<boolean> {
   const secret = await config.webhookSecret();
-  if (!secret) return true;
+  if (!secret) return !config.requireWebhookSecret;
   const provided = req.headers.get(config.webhookSecretHeader);
-  return provided === secret;
+  if (provided === null) return false;
+  return timingSafeEqualStr(provided, secret);
 }
 
 export function isTypingPayload(body: unknown): body is SendblueTypingPayload {

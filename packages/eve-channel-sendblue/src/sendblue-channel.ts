@@ -7,7 +7,7 @@ import {
   type SendFn,
 } from "eve/channels";
 import { createSendblueClient, type SendblueClient } from "./client.js";
-import { resolveConfig } from "./config.js";
+import { assertWebhookSecurity, resolveConfig } from "./config.js";
 import { buildContext } from "./context.js";
 import { routingFromPayload, sendblueContinuationToken } from "./continuation-token.js";
 import { buildUserContent, guessMediaType, resolveInboundMediaUrl } from "./media.js";
@@ -119,6 +119,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 export function sendblueChannel(
   config: SendblueChannelConfig = {},
 ): Channel<SendblueChannelState, SendblueReceiveTarget, SendblueChannelMetadata> {
+  assertWebhookSecurity(config);
   const resolved = resolveConfig(config);
   const client = createSendblueClient(resolved);
   const events: ChannelEvents<SendblueContext> = {

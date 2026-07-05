@@ -22,15 +22,17 @@ import { sendblueChannel } from "eve-channel-sendblue";
 export default sendblueChannel();
 ```
 
-Credentials fall back to environment variables, so the call can stay empty:
+Credentials fall back to environment variables, so the call can stay empty once
+they are set (a webhook secret is required by default, see
+[Webhook security](#webhook-security-fail-closed-by-default)):
 
-| Variable                       | Purpose                                                  |
-| ------------------------------ | -------------------------------------------------------- |
-| `SENDBLUE_API_KEY`             | Sendblue API key id                                      |
-| `SENDBLUE_API_SECRET`          | Sendblue API secret                                      |
-| `SENDBLUE_FROM_NUMBER`         | Default sender, E.164 (e.g. `+14155551234`)              |
-| `SENDBLUE_WEBHOOK_SECRET`      | Optional; checked against the `sb-signing-secret` header |
-| `SENDBLUE_STATUS_CALLBACK_URL` | Optional; per-message delivery-status callback URL       |
+| Variable                       | Purpose                                                             |
+| ------------------------------ | ------------------------------------------------------------------- |
+| `SENDBLUE_API_KEY`             | Sendblue API key id                                                 |
+| `SENDBLUE_API_SECRET`          | Sendblue API secret                                                 |
+| `SENDBLUE_FROM_NUMBER`         | Default sender, E.164 (e.g. `+14155551234`)                         |
+| `SENDBLUE_WEBHOOK_SECRET`      | Required by default; checked against the `sb-signing-secret` header |
+| `SENDBLUE_STATUS_CALLBACK_URL` | Optional; per-message delivery-status callback URL                  |
 
 Or pass them explicitly. Each credential also accepts a lazy resolver function
 that is called once and cached:
@@ -62,6 +64,22 @@ POST /eve/v1/sendblue/webhook
 
 Point your Sendblue **message**, **status**, and **typing** webhooks at that URL.
 The handler distinguishes the payload types internally.
+
+### Webhook security (fail closed by default)
+
+The webhook is unauthenticated unless you verify it, so the channel **requires a
+secret by default** and throws on construction if none is configured. Set
+`SENDBLUE_WEBHOOK_SECRET` (or `credentials.webhookSecret`) and the **same** secret
+in Sendblue, so it sends the `sb-signing-secret` header. The header is compared in
+constant time, and requests without a valid signature get a `401`.
+
+To run the webhook open on purpose (local dev, a trusted network), set
+`requireWebhookSecret: false`. You then must **not** also provide a secret; that
+contradiction throws, so there's no ambiguity about what you meant.
+
+```ts
+sendblueChannel({ requireWebhookSecret: false }); // open, no secret
+```
 
 ## Features
 
